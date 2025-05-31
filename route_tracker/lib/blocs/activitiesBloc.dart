@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:http/http.dart' as http;
 
@@ -7,13 +10,14 @@ class ActivitiesBloc extends ChangeNotifier{
   List<Map<String, dynamic>> _visits = [];
 
 
-  get visits => _visits;
+  List<Map<String, dynamic>> get visits => _visits;
 
-  set visits(value){
+  set visits(List<Map<String,dynamic>>value){
     _visits = value;
     notifyListeners();
   }
-  static final base_url = "https://kqgbftwsodpttpqgqnbh.supabase.co/rest/v1/";
+  final base_url = dotenv.env['SUPABASE_URL'];
+  final apiKey =  dotenv.env['API_KEY'];
 /**
  * visits payload response format
   [{
@@ -30,17 +34,28 @@ class ActivitiesBloc extends ChangeNotifier{
     */
 
   Future<void> getVisits() async{
-   var url = Uri.parse("$base_url/visits");
+   var url = Uri.parse("${base_url}visits");
+
    var headers = {
-     "apikey":"",
+     "apikey": apiKey.toString(),
      "Content-Type": "application/json"
    };
-
+  try {
    var response = await http.get(url,headers: headers).timeout(Duration(minutes: 4));
 
    if (response.statusCode == 200){
+     final List<dynamic> data = jsonDecode(response.body);
+     visits = List<Map<String, dynamic>>.from(data);
+   }else if(response.statusCode >= 400 && response.statusCode <= 499){
+     print("There was a format or permission issue");
 
+   }else{
+     print("There was an issue processing your request");
    }
+  }catch(error){
+    print("There was an error: ");
+    print(error);
+  }
 
 
   }
